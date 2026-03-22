@@ -1,0 +1,326 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.header{padding:1.25rem 1.5rem;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.header h1{font-size:18px;font-weight:500;color:var(--color-text-primary)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:1.25rem 1.5rem}
+.stat{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:0.75rem 1rem}
+.stat-label{font-size:12px;color:var(--color-text-secondary);margin-bottom:4px}
+.stat-val{font-size:22px;font-weight:500;color:var(--color-text-primary)}
+.toolbar{padding:0 1.5rem 1rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{background:transparent;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:6px 14px;font-size:13px;color:var(--color-text-primary);cursor:pointer}
+.btn:hover{background:var(--color-background-secondary)}
+.btn-primary{background:var(--color-background-info);color:var(--color-text-info);border-color:var(--color-border-info)}
+.btn-primary:hover{opacity:0.85}
+.tabs{display:flex;gap:4px;border-bottom:0.5px solid var(--color-border-tertiary);padding:0 1.5rem}
+.tab{padding:8px 16px;font-size:13px;color:var(--color-text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-0.5px}
+.tab.active{color:var(--color-text-primary);border-color:var(--color-text-primary);font-weight:500}
+.view{display:none;padding:1.25rem 1.5rem}
+.view.active{display:block}
+.kanban{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;align-items:start}
+.col-header{font-size:12px;font-weight:500;color:var(--color-text-secondary);padding:6px 8px;margin-bottom:6px;display:flex;justify-content:space-between}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.card:hover{border-color:var(--color-border-secondary)}
+.card-org{font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px}
+.card-role{font-size:12px;color:var(--color-text-secondary);margin-bottom:6px}
+.card-meta{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px}
+.badge{font-size:11px;padding:2px 8px;border-radius:var(--border-radius-md);font-weight:500}
+.deadline-badge{font-size:11px;color:var(--color-text-secondary)}
+.deadline-urgent{color:var(--color-text-danger);font-weight:500}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--color-background-primary);border-radius:var(--border-radius-lg);border:0.5px solid var(--color-border-tertiary);width:min(520px,94vw);max-height:85vh;overflow-y:auto;padding:1.5rem}
+.modal h2{font-size:16px;font-weight:500;margin-bottom:1.25rem}
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:12px;color:var(--color-text-secondary);margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;padding:7px 10px;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);font-family:var(--font-sans)}
+.field textarea{resize:vertical;min-height:70px}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
+.list-table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+.list-table th{text-align:left;padding:8px 10px;font-size:12px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary)}
+.list-table td{padding:10px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary);word-break:break-word}
+.list-table tr:hover td{background:var(--color-background-secondary)}
+.tag-pill{font-size:11px;padding:2px 8px;border-radius:100px;display:inline-block;margin:1px}
+.empty{text-align:center;padding:3rem;color:var(--color-text-secondary);font-size:13px}
+.filter-bar{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
+.filter-bar select{padding:5px 10px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary)}
+.del-btn{background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:14px;padding:2px 6px;border-radius:4px}
+.del-btn:hover{color:var(--color-text-danger)}
+</style>
+
+<div class="header">
+  <h1>Internship tracker</h1>
+  <button class="btn btn-primary" onclick="openModal()">+ Add application</button>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('kanban',this)">Board</div>
+  <div class="tab" onclick="switchTab('list',this)">List</div>
+  <div class="tab" onclick="switchTab('deadlines',this)">Deadlines</div>
+  <div class="tab" onclick="switchTab('contacts',this)">Contacts</div>
+</div>
+
+<div class="view active" id="view-kanban">
+  <div class="kanban" id="kanban-board"></div>
+</div>
+
+<div class="view" id="view-list">
+  <div class="filter-bar">
+    <select id="filter-status" onchange="renderList()">
+      <option value="">All statuses</option>
+      <option>Researching</option><option>Applied</option><option>Interview</option><option>Offer</option><option>Rejected</option>
+    </select>
+    <select id="filter-type" onchange="renderList()">
+      <option value="">All types</option>
+      <option>International org</option><option>NGO</option><option>Multilateral</option><option>Private sector</option><option>Other</option>
+    </select>
+  </div>
+  <div id="list-view"></div>
+</div>
+
+<div class="view" id="view-deadlines">
+  <div id="deadlines-view"></div>
+</div>
+
+<div class="view" id="view-contacts">
+  <div id="contacts-view"></div>
+</div>
+
+<div class="modal-overlay" id="modal" onclick="e=>{if(e.target===this)closeModal()}">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2 id="modal-title">Add application</h2>
+    <div class="field"><label>Organization *</label><input id="f-org" placeholder="e.g. IFRC, UNICEF, WTO"></div>
+    <div class="field"><label>Role / position *</label><input id="f-role" placeholder="e.g. NSD Competency Intern"></div>
+    <div class="field"><label>Location</label><input id="f-loc" placeholder="e.g. Geneva, Remote"></div>
+    <div class="field"><label>Type</label>
+      <select id="f-type"><option>International org</option><option>NGO</option><option>Multilateral</option><option>Private sector</option><option>Other</option></select>
+    </div>
+    <div class="field"><label>Status</label>
+      <select id="f-status"><option>Researching</option><option>Applied</option><option>Interview</option><option>Offer</option><option>Rejected</option></select>
+    </div>
+    <div class="field"><label>Deadline</label><input id="f-deadline" type="date"></div>
+    <div class="field"><label>Application link</label><input id="f-link" placeholder="https://..."></div>
+    <div class="field"><label>Contact name</label><input id="f-contact" placeholder="Name of HR / referral contact"></div>
+    <div class="field"><label>Contact email / LinkedIn</label><input id="f-contact-info" placeholder="email or LinkedIn URL"></div>
+    <div class="field"><label>CV version used</label><input id="f-cv" placeholder="e.g. CV_IFRC_March2026.pdf"></div>
+    <div class="field"><label>Cover letter notes</label><textarea id="f-cl" placeholder="Key points covered, angle used..."></textarea></div>
+    <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Requirements, contacts, follow-up reminders..."></textarea></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveApp()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLS = ['Researching','Applied','Interview','Offer','Rejected'];
+const COLORS = {Researching:'#888780',Applied:'#185FA5',Interview:'#854F0B',Offer:'#3B6D11',Rejected:'#A32D2D'};
+const BG = {Researching:'#F1EFE8',Applied:'#E6F1FB',Interview:'#FAEEDA',Offer:'#EAF3DE',Rejected:'#FCEBEB'};
+const TEXT = {Researching:'#444441',Applied:'#0C447C',Interview:'#633806',Offer:'#27500A',Rejected:'#791F1F'};
+
+let apps = JSON.parse(localStorage.getItem('intern_apps')||'[]');
+let editId = null;
+
+function save(){localStorage.setItem('intern_apps',JSON.stringify(apps))}
+function genId(){return Date.now()+''}
+
+function daysUntil(d){
+  if(!d)return null;
+  const diff=new Date(d)-new Date();
+  return Math.ceil(diff/86400000);
+}
+
+function fmtDate(d){
+  if(!d)return '';
+  const dt=new Date(d);
+  return dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+}
+
+function renderStats(){
+  const total=apps.length;
+  const applied=apps.filter(a=>a.status!=='Researching').length;
+  const interviews=apps.filter(a=>a.status==='Interview').length;
+  const urgent=apps.filter(a=>{const d=daysUntil(a.deadline);return d!==null&&d<=7&&d>=0&&a.status!=='Offer'&&a.status!=='Rejected'}).length;
+  document.getElementById('stats').innerHTML=`
+    <div class="stat"><div class="stat-label">Total applications</div><div class="stat-val">${total}</div></div>
+    <div class="stat"><div class="stat-label">Submitted</div><div class="stat-val">${applied}</div></div>
+    <div class="stat"><div class="stat-label">Interviews</div><div class="stat-val">${interviews}</div></div>
+    <div class="stat"><div class="stat-label">Deadlines this week</div><div class="stat-val" style="color:${urgent>0?'var(--color-text-danger)':'var(--color-text-primary)'}">${urgent}</div></div>
+  `;
+}
+
+function renderKanban(){
+  const board=document.getElementById('kanban-board');
+  board.innerHTML=COLS.map(col=>{
+    const cards=apps.filter(a=>a.status===col);
+    const cardHTML=cards.length?cards.map(a=>cardHTML_fn(a)).join(''):`<div style="font-size:12px;color:var(--color-text-secondary);padding:8px;text-align:center">—</div>`;
+    return`<div>
+      <div class="col-header"><span>${col}</span><span style="background:${BG[col]};color:${TEXT[col]};border-radius:100px;padding:1px 7px;font-size:11px">${cards.length}</span></div>
+      ${cardHTML}
+    </div>`;
+  }).join('');
+}
+
+function cardHTML_fn(a){
+  const d=daysUntil(a.deadline);
+  const dLabel=d===null?'':(d<0?'<span class="deadline-urgent">Overdue</span>':d===0?'<span class="deadline-urgent">Today</span>':d<=7?`<span class="deadline-urgent">${d}d left</span>`:`<span class="deadline-badge">${d}d</span>`);
+  return`<div class="card" onclick="editApp('${a.id}')">
+    <div class="card-org">${a.org}</div>
+    <div class="card-role">${a.role}</div>
+    <div class="card-meta">
+      <span class="badge" style="background:${BG[a.status]};color:${TEXT[a.status]}">${a.type||'—'}</span>
+      ${dLabel}
+    </div>
+    ${a.loc?`<div style="font-size:11px;color:var(--color-text-secondary);margin-top:5px">${a.loc}</div>`:''}
+  </div>`;
+}
+
+function renderList(){
+  const statusF=document.getElementById('filter-status').value;
+  const typeF=document.getElementById('filter-type').value;
+  let filtered=apps.filter(a=>(!statusF||a.status===statusF)&&(!typeF||a.type===typeF));
+  const el=document.getElementById('list-view');
+  if(!filtered.length){el.innerHTML='<div class="empty">No applications yet</div>';return}
+  el.innerHTML=`<table class="list-table">
+    <thead><tr>
+      <th style="width:20%">Organization</th>
+      <th style="width:22%">Role</th>
+      <th style="width:13%">Status</th>
+      <th style="width:13%">Deadline</th>
+      <th style="width:14%">CV version</th>
+      <th style="width:14%">Contact</th>
+      <th style="width:4%"></th>
+    </tr></thead>
+    <tbody>${filtered.map(a=>`<tr>
+      <td><strong>${a.org}</strong>${a.loc?`<br><span style="font-size:11px;color:var(--color-text-secondary)">${a.loc}</span>`:''}</td>
+      <td>${a.role}</td>
+      <td><span class="badge" style="background:${BG[a.status]};color:${TEXT[a.status]}">${a.status}</span></td>
+      <td>${a.deadline?`${fmtDate(a.deadline)}${daysUntil(a.deadline)!==null&&daysUntil(a.deadline)<=7&&daysUntil(a.deadline)>=0?` <span style="color:var(--color-text-danger);font-size:11px">(${daysUntil(a.deadline)}d)</span>`:''}`:'-'}</td>
+      <td style="font-size:12px">${a.cv||'-'}</td>
+      <td style="font-size:12px">${a.contact||'-'}</td>
+      <td><button class="del-btn" onclick="event.stopPropagation();deleteApp('${a.id}')">×</button></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function renderDeadlines(){
+  const sorted=apps.filter(a=>a.deadline&&a.status!=='Rejected').sort((a,b)=>new Date(a.deadline)-new Date(b.deadline));
+  const el=document.getElementById('deadlines-view');
+  if(!sorted.length){el.innerHTML='<div class="empty">No deadlines set yet</div>';return}
+  el.innerHTML=`<table class="list-table">
+    <thead><tr>
+      <th style="width:22%">Organization</th>
+      <th style="width:25%">Role</th>
+      <th style="width:15%">Deadline</th>
+      <th style="width:15%">Days left</th>
+      <th style="width:13%">Status</th>
+    </tr></thead>
+    <tbody>${sorted.map(a=>{
+      const d=daysUntil(a.deadline);
+      const dText=d<0?'Overdue':d===0?'Today':`${d} days`;
+      const dColor=d<0||d===0?'var(--color-text-danger)':d<=7?'var(--color-text-warning)':'var(--color-text-primary)';
+      return`<tr>
+        <td><strong>${a.org}</strong></td>
+        <td>${a.role}</td>
+        <td>${fmtDate(a.deadline)}</td>
+        <td style="color:${dColor};font-weight:${d<=7?500:400}">${dText}</td>
+        <td><span class="badge" style="background:${BG[a.status]};color:${TEXT[a.status]}">${a.status}</span></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function renderContacts(){
+  const withContact=apps.filter(a=>a.contact||a.contactInfo);
+  const el=document.getElementById('contacts-view');
+  if(!withContact.length){el.innerHTML='<div class="empty">No contacts added yet. Add contacts when creating applications.</div>';return}
+  el.innerHTML=`<table class="list-table">
+    <thead><tr>
+      <th style="width:20%">Contact</th>
+      <th style="width:22%">Email / LinkedIn</th>
+      <th style="width:20%">Organization</th>
+      <th style="width:20%">Role applied</th>
+      <th style="width:13%">Status</th>
+    </tr></thead>
+    <tbody>${withContact.map(a=>`<tr>
+      <td><strong>${a.contact||'-'}</strong></td>
+      <td style="font-size:12px">${a.contactInfo?`<a href="${a.contactInfo.startsWith('http')?a.contactInfo:'mailto:'+a.contactInfo}" style="color:var(--color-text-info)">${a.contactInfo.replace('https://','')}</a>`:'-'}</td>
+      <td>${a.org}</td>
+      <td>${a.role}</td>
+      <td><span class="badge" style="background:${BG[a.status]};color:${TEXT[a.status]}">${a.status}</span></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function renderAll(){renderStats();renderKanban();renderList();renderDeadlines();renderContacts()}
+
+function switchTab(id,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('view-'+id).classList.add('active');
+}
+
+function openModal(app=null){
+  editId=app?app.id:null;
+  document.getElementById('modal-title').textContent=app?'Edit application':'Add application';
+  document.getElementById('f-org').value=app?.org||'';
+  document.getElementById('f-role').value=app?.role||'';
+  document.getElementById('f-loc').value=app?.loc||'';
+  document.getElementById('f-type').value=app?.type||'International org';
+  document.getElementById('f-status').value=app?.status||'Researching';
+  document.getElementById('f-deadline').value=app?.deadline||'';
+  document.getElementById('f-link').value=app?.link||'';
+  document.getElementById('f-contact').value=app?.contact||'';
+  document.getElementById('f-contact-info').value=app?.contactInfo||'';
+  document.getElementById('f-cv').value=app?.cv||'';
+  document.getElementById('f-cl').value=app?.cl||'';
+  document.getElementById('f-notes').value=app?.notes||'';
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal(){document.getElementById('modal').classList.remove('open')}
+
+function saveApp(){
+  const org=document.getElementById('f-org').value.trim();
+  const role=document.getElementById('f-role').value.trim();
+  if(!org||!role){alert('Organization and role are required');return}
+  const data={
+    id:editId||genId(),org,role,
+    loc:document.getElementById('f-loc').value.trim(),
+    type:document.getElementById('f-type').value,
+    status:document.getElementById('f-status').value,
+    deadline:document.getElementById('f-deadline').value,
+    link:document.getElementById('f-link').value.trim(),
+    contact:document.getElementById('f-contact').value.trim(),
+    contactInfo:document.getElementById('f-contact-info').value.trim(),
+    cv:document.getElementById('f-cv').value.trim(),
+    cl:document.getElementById('f-cl').value.trim(),
+    notes:document.getElementById('f-notes').value.trim(),
+  };
+  if(editId){const i=apps.findIndex(a=>a.id===editId);apps[i]=data;}
+  else{apps.push(data)}
+  save();closeModal();renderAll();
+}
+
+function editApp(id){openModal(apps.find(a=>a.id===id))}
+
+function deleteApp(id){
+  if(!confirm('Remove this application?'))return;
+  apps=apps.filter(a=>a.id!==id);save();renderAll();
+}
+
+document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal()});
+
+const demo=[
+  {id:'1',org:'IFRC',role:'NSD Competency Framework Intern',loc:'Geneva',type:'International org',status:'Applied',deadline:new Date(Date.now()+5*86400000).toISOString().split('T')[0],link:'https://ifrc.org',contact:'Sarah Muller',contactInfo:'s.muller@ifrc.org',cv:'CV_IFRC_Mar2026.pdf',cl:'Focused on NSD experience and youth leadership angle',notes:'Fully funded, language req: English+French preferred'},
+  {id:'2',org:'UNICEF',role:'Youth Engagement Associate',loc:'Warsaw / Remote',type:'International org',status:'Researching',deadline:new Date(Date.now()+18*86400000).toISOString().split('T')[0],link:'',contact:'',contactInfo:'',cv:'',cl:'',notes:'Check YouthLab portal'},
+  {id:'3',org:'UNDP',role:'SDG Innovation Intern',loc:'Geneva',type:'Multilateral',status:'Interview',deadline:'',link:'',contact:'Marta K.',contactInfo:'https://linkedin.com/in/martak',cv:'CV_UNDP_Feb2026.pdf',cl:'Systems thinking angle',notes:'2nd round interview scheduled'},
+];
+if(!apps.length){apps=demo;save()}
+
+renderAll();
+</script>
